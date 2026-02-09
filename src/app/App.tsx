@@ -15,7 +15,9 @@ import {
   Settings,
   ShieldCheck,
   Zap,
-  HelpCircle
+  HelpCircle,
+  Trash2,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast, Toaster } from 'sonner';
@@ -25,8 +27,24 @@ import { createClient } from '@supabase/supabase-js';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
 import cobryLogo from "figma:asset/abed752b7258d81c8fa586b4292a75a7add0f0b1.png";
 
-// --- Initialize Supabase ---
-const supabase = createClient(`https://${projectId}.supabase.co`, publicAnonKey);
+// --- Initialize Supabase singleton ---
+// Using a global variable to ensure only one instance is created even across HMR/re-runs
+const getSupabaseInstance = () => {
+  const global = typeof window !== 'undefined' ? (window as any) : {};
+  if (!global._supabaseInstance) {
+    global._supabaseInstance = createClient(`https://${projectId}.supabase.co`, publicAnonKey, {
+      auth: {
+        persistSession: false, // Prevents "Multiple GoTrueClient instances" warning
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+        storageKey: `sb-${projectId}-auth-token-unique` // Use a specific key to avoid conflicts
+      }
+    });
+  }
+  return global._supabaseInstance;
+};
+
+const supabase = getSupabaseInstance();
 
 // --- Utility ---
 function cn(...inputs: ClassValue[]) {
@@ -139,6 +157,7 @@ export default function DashboardScopingApp() {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [userEmail, setUserEmail] = useState('');
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -215,6 +234,33 @@ PART 6: VISUAL ASSETS
   const handleSubmitResults = async () => {
     setIsSubmitting(true);
     try {
+      // 1. Upload files first if any
+      const fileUrls: string[] = [];
+      if (uploadedFiles.length > 0) {
+        toast.loading(`Uploading ${uploadedFiles.length} asset(s)...`);
+        for (const file of uploadedFiles) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+          const filePath = `${fileName}`;
+          
+          const { data, error } = await supabase.storage
+            .from('make-6af5a51f-assets')
+            .upload(filePath, file);
+            
+          if (error) {
+            console.error('Upload error:', error);
+            throw new Error(`Failed to upload ${file.name}: ${error.message}`);
+          }
+          
+          const { data: { publicUrl } } = supabase.storage
+            .from('make-6af5a51f-assets')
+            .getPublicUrl(filePath);
+            
+          fileUrls.push(publicUrl);
+        }
+      }
+
+      // 2. Submit to server
       const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-6af5a51f/submit`, {
         method: 'POST',
         headers: {
@@ -224,7 +270,8 @@ PART 6: VISUAL ASSETS
         body: JSON.stringify({
           formData,
           userEmail,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          fileUrls
         })
       });
 
@@ -234,11 +281,14 @@ PART 6: VISUAL ASSETS
         toast.success(`Results submitted! ${userEmail ? `Copy sent to ${userEmail}.` : ''} Anthony will be in touch.`);
         setShowSubmitModal(false);
       } else {
-        throw new Error(result.error || 'Submission failed');
+        // Log the detailed error from the server
+        console.error('Server submission error:', result.error);
+        toast.error(`Submission error: ${result.error}`);
+        // Don't throw, just let the user see the toast
       }
-    } catch (error) {
-      console.error('Submission error:', error);
-      toast.error('Failed to submit results. Please try again or copy the text manually.');
+    } catch (error: any) {
+      console.error('Submission flow error:', error);
+      toast.error(error.message || 'Failed to submit results. Please try again or copy the text manually.');
     } finally {
       setIsSubmitting(false);
     }
@@ -561,7 +611,7 @@ PART 6: VISUAL ASSETS
                 <FormField label="Data Quality">
                   <div className="grid grid-cols-2 gap-4">
                     {['Clean', 'Messy'].map(q => (
-                      <label key={q} className="flex flex-col p-4 rounded-2xl border-2 border-slate-100 hover:border-orange-200 cursor-pointer has-[:checked]:border-orange-50 transition-all">
+                      <label key={q} className="flex flex-col p-4 rounded-2xl border-2 border-slate-100 hover:border-orange-200 cursor-pointer has-[:checked]:border-orange-50 has-[:checked]:bg-orange-50 transition-all">
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-bold text-slate-800">{q}</span>
                           <input type="radio" value={q} {...register('part4.quality')} className="w-5 h-5 text-orange-600" />
@@ -616,7 +666,7 @@ PART 6: VISUAL ASSETS
                       { id: 'Story', title: 'Story Layout', desc: 'Long scroll with text context' },
                       { id: 'Control Room', title: 'Control Room', desc: 'Dense info on one screen' }
                     ].map(layout => (
-                      <label key={layout.id} className="flex flex-col p-4 rounded-2xl border-2 border-slate-100 hover:border-pink-200 cursor-pointer has-[:checked]:border-pink-500 transition-all">
+                      <label key={layout.id} className="flex flex-col p-4 rounded-2xl border-2 border-slate-100 hover:border-pink-200 cursor-pointer has-[:checked]:border-pink-500 has-[:checked]:bg-pink-50 transition-all">
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-bold text-slate-800">{layout.title}</span>
                           <input type="radio" value={layout.id} {...register('part5.layout')} className="w-5 h-5 text-pink-600" />
@@ -668,7 +718,7 @@ PART 6: VISUAL ASSETS
                           onClick={() => removeFile(idx)}
                           className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                         >
-                          <Users size={14} /> 
+                          <Trash2 size={14} />
                         </button>
                         <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-[10px] text-white p-1 truncate">
                           {file.name}
