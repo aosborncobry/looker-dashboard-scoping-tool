@@ -518,7 +518,7 @@ PART 6: VISUAL ASSETS
                 <FormField label="Data Quality">
                   <div className="grid grid-cols-2 gap-4">
                     {['Clean', 'Messy'].map(q => (
-                      <label key={q} className="flex flex-col p-4 rounded-2xl border-2 border-slate-100 hover:border-orange-200 cursor-pointer has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 transition-all">
+                      <label key={q} className="flex flex-col p-4 rounded-2xl border-2 border-slate-100 hover:border-orange-200 cursor-pointer has-[:checked]:border-orange-50 transition-all">
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-bold text-slate-800">{q}</span>
                           <input type="radio" value={q} {...register('part4.quality')} className="w-5 h-5 text-orange-600" />
@@ -573,7 +573,7 @@ PART 6: VISUAL ASSETS
                       { id: 'Story', title: 'Story Layout', desc: 'Long scroll with text context' },
                       { id: 'Control Room', title: 'Control Room', desc: 'Dense info on one screen' }
                     ].map(layout => (
-                      <label key={layout.id} className="flex flex-col p-4 rounded-2xl border-2 border-slate-100 hover:border-pink-200 cursor-pointer has-[:checked]:border-pink-500 has-[:checked]:bg-pink-50 transition-all">
+                      <label key={layout.id} className="flex flex-col p-4 rounded-2xl border-2 border-slate-100 hover:border-pink-200 cursor-pointer has-[:checked]:border-pink-500 transition-all">
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-bold text-slate-800">{layout.title}</span>
                           <input type="radio" value={layout.id} {...register('part5.layout')} className="w-5 h-5 text-pink-600" />
@@ -592,56 +592,43 @@ PART 6: VISUAL ASSETS
                 <SectionHeading 
                   icon={Settings} 
                   title="Part 6: Visual Assets & Sketches" 
-                  description="Upload any existing dashboard sketches, wireframe pictures, or brand guidelines."
+                  description="Upload any existing dashboard sketches, wireframe pictures, or your company's brand guidelines."
                   colorClass="text-cyan-600"
                 />
-                <div className="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center group hover:border-cyan-400 transition-all">
+                <div className="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center group hover:border-cyan-400 transition-all cursor-pointer relative">
+                  <input 
+                    type="file" 
+                    multiple 
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                  />
                   <div className="flex flex-col items-center">
-                    <div className="w-16 h-16 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mb-4 group-hover:bg-cyan-50 group-hover:text-cyan-500 transition-colors">
-                      <Download size={24} />
+                    <div className="w-16 h-16 bg-cyan-50 text-cyan-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                      <Download size={32} />
                     </div>
-                    <h3 className="text-lg font-bold text-slate-900 mb-2">Upload visual assets</h3>
-                    <p className="text-sm text-slate-500 mb-6 max-w-xs">Drag and drop your wireframes, logo, or brand guide here.</p>
-                    <input 
-                      type="file" 
-                      multiple 
-                      onChange={handleFileChange}
-                      className="hidden" 
-                      id="file-upload"
-                      accept="image/*,.pdf"
-                    />
-                    <label 
-                      htmlFor="file-upload"
-                      className="px-6 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-xl cursor-pointer hover:bg-slate-800 transition-colors"
-                    >
-                      Select Files
-                    </label>
+                    <h3 className="text-lg font-bold text-slate-900">Drop files here or click to upload</h3>
+                    <p className="text-slate-500 text-sm mt-2">Supports JPG, PNG, SVG (Max 10MB each)</p>
                   </div>
                 </div>
 
                 {uploadedFiles.length > 0 && (
-                  <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="mt-8 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     {uploadedFiles.map((file, idx) => (
-                      <div key={idx} className="relative group aspect-square rounded-2xl overflow-hidden border border-slate-200 bg-white">
-                        <div className="absolute inset-0 flex items-center justify-center p-2">
-                          {file.type.startsWith('image/') ? (
-                            <img 
-                              src={URL.createObjectURL(file)} 
-                              alt={file.name} 
-                              className="w-full h-full object-cover rounded-lg"
-                            />
-                          ) : (
-                            <FileText size={48} className="text-slate-300" />
-                          )}
-                        </div>
-                        <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-4">
-                          <p className="text-white text-[10px] font-medium truncate w-full text-center mb-2">{file.name}</p>
-                          <button 
-                            onClick={() => removeFile(idx)}
-                            className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                          >
-                            <Settings size={14} />
-                          </button>
+                      <div key={idx} className="relative group aspect-square bg-slate-100 rounded-xl overflow-hidden border border-slate-200">
+                        <img 
+                          src={URL.createObjectURL(file)} 
+                          alt={`Upload ${idx}`} 
+                          className="w-full h-full object-cover"
+                        />
+                        <button 
+                          onClick={() => removeFile(idx)}
+                          className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Users size={14} /> 
+                        </button>
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-[10px] text-white p-1 truncate">
+                          {file.name}
                         </div>
                       </div>
                     ))}
@@ -650,13 +637,13 @@ PART 6: VISUAL ASSETS
               </section>
             )}
 
-            {/* Review Step */}
+            {/* Summary / Export */}
             {activeStep === 6 && (
               <section>
                 <SectionHeading 
                   icon={ClipboardCheck} 
-                  title="Final Review & Document Generation" 
-                  description="Review your requirements below. You can copy the raw text for your notes or submit the results directly to Anthony at Cobry."
+                  title="Review & Export" 
+                  description="Review your scoping document. You can copy the raw text to your proposal or keep working."
                   colorClass="text-slate-900"
                 />
                 
