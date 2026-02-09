@@ -21,7 +21,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import { toast, Toaster } from 'sonner';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { createClient } from '@supabase/supabase-js';
+import { projectId, publicAnonKey } from '/utils/supabase/info';
 import cobryLogo from "figma:asset/abed752b7258d81c8fa586b4292a75a7add0f0b1.png";
+
+// --- Initialize Supabase ---
+const supabase = createClient(`https://${projectId}.supabase.co`, publicAnonKey);
 
 // --- Utility ---
 function cn(...inputs: ClassValue[]) {
@@ -134,6 +139,7 @@ export default function DashboardScopingApp() {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [userEmail, setUserEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -206,9 +212,36 @@ PART 6: VISUAL ASSETS
     toast.success('Scoping document copied to clipboard!');
   };
 
-  const handleSubmitResults = () => {
-    toast.success(`Results submitted! ${userEmail ? `Copy sent to ${userEmail}.` : ''} Anthony will be in touch.`);
-    setShowSubmitModal(false);
+  const handleSubmitResults = async () => {
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-6af5a51f/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${publicAnonKey}`
+        },
+        body: JSON.stringify({
+          formData,
+          userEmail,
+          timestamp: new Date().toISOString()
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast.success(`Results submitted! ${userEmail ? `Copy sent to ${userEmail}.` : ''} Anthony will be in touch.`);
+        setShowSubmitModal(false);
+      } else {
+        throw new Error(result.error || 'Submission failed');
+      }
+    } catch (error) {
+      console.error('Submission error:', error);
+      toast.error('Failed to submit results. Please try again or copy the text manually.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -248,9 +281,19 @@ PART 6: VISUAL ASSETS
                   
                   <button 
                     onClick={handleSubmitResults}
-                    className="w-full py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-xl shadow-blue-200 hover:bg-blue-700 active:scale-[0.98] transition-all"
+                    disabled={isSubmitting}
+                    className="w-full py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-xl shadow-blue-200 hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    Send to Cobry
+                    {isSubmitting ? (
+                      <>
+                        <motion.div 
+                          animate={{ rotate: 360 }}
+                          transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                          className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                        />
+                        Sending...
+                      </>
+                    ) : 'Send to Cobry'}
                   </button>
                   
                   <button 
